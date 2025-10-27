@@ -1,0 +1,165 @@
+// File: StudentMVC.java
+
+import java.sql.*;
+import java.util.*;
+
+// -------- MODEL --------
+class Student {
+    private int id;
+    private String name;
+    private String course;
+    private int marks;
+
+    public Student(int id, String name, String course, int marks) {
+        this.id = id;
+        this.name = name;
+        this.course = course;
+        this.marks = marks;
+    }
+
+    public int getId() { return id; }
+    public String getName() { return name; }
+    public String getCourse() { return course; }
+    public int getMarks() { return marks; }
+}
+
+// Handles Database Operations (Data Access Layer)
+class StudentDAO {
+    private Connection con;
+
+    public StudentDAO() throws Exception {
+        Class.forName("com.mysql.cj.jdbc.Driver");
+        con = DriverManager.getConnection("jdbc:mysql://localhost:3306/studentdb", "root", "root");
+    }
+
+    // CREATE
+    public void addStudent(Student s) throws SQLException {
+        String sql = "INSERT INTO students VALUES (?, ?, ?, ?)";
+        PreparedStatement ps = con.prepareStatement(sql);
+        ps.setInt(1, s.getId());
+        ps.setString(2, s.getName());
+        ps.setString(3, s.getCourse());
+        ps.setInt(4, s.getMarks());
+        ps.executeUpdate();
+        System.out.println("✅ Student added successfully!");
+    }
+
+    // READ
+    public void viewStudents() throws SQLException {
+        String sql = "SELECT * FROM students";
+        Statement st = con.createStatement();
+        ResultSet rs = st.executeQuery(sql);
+
+        System.out.println("\nID\tName\t\tCourse\t\tMarks");
+        System.out.println("---------------------------------------------");
+        while (rs.next()) {
+            System.out.printf("%d\t%s\t\t%s\t\t%d\n",
+                    rs.getInt("id"), rs.getString("name"),
+                    rs.getString("course"), rs.getInt("marks"));
+        }
+    }
+
+    // UPDATE
+    public void updateMarks(int id, int newMarks) throws SQLException {
+        String sql = "UPDATE students SET marks=? WHERE id=?";
+        PreparedStatement ps = con.prepareStatement(sql);
+        ps.setInt(1, newMarks);
+        ps.setInt(2, id);
+        int rows = ps.executeUpdate();
+        if (rows > 0) System.out.println("✅ Marks updated successfully!");
+        else System.out.println("❌ Student not found!");
+    }
+
+    // DELETE
+    public void deleteStudent(int id) throws SQLException {
+        String sql = "DELETE FROM students WHERE id=?";
+        PreparedStatement ps = con.prepareStatement(sql);
+        ps.setInt(1, id);
+        int rows = ps.executeUpdate();
+        if (rows > 0) System.out.println("✅ Student deleted successfully!");
+        else System.out.println("❌ Student not found!");
+    }
+
+    public void close() throws SQLException {
+        con.close();
+    }
+}
+
+// -------- VIEW --------
+class StudentView {
+    private Scanner sc = new Scanner(System.in);
+
+    public int menu() {
+        System.out.println("\n===== STUDENT MANAGEMENT SYSTEM =====");
+        System.out.println("1. Add Student");
+        System.out.println("2. View Students");
+        System.out.println("3. Update Marks");
+        System.out.println("4. Delete Student");
+        System.out.println("5. Exit");
+        System.out.print("Enter your choice: ");
+        return sc.nextInt();
+    }
+
+    public Student getStudentDetails() {
+        System.out.print("Enter ID: ");
+        int id = sc.nextInt();
+        sc.nextLine();
+        System.out.print("Enter Name: ");
+        String name = sc.nextLine();
+        System.out.print("Enter Course: ");
+        String course = sc.nextLine();
+        System.out.print("Enter Marks: ");
+        int marks = sc.nextInt();
+        return new Student(id, name, course, marks);
+    }
+
+    public int getStudentId() {
+        System.out.print("Enter Student ID: ");
+        return sc.nextInt();
+    }
+
+    public int getUpdatedMarks() {
+        System.out.print("Enter new Marks: ");
+        return sc.nextInt();
+    }
+}
+
+// -------- CONTROLLER --------
+public class StudentMVC {
+    public static void main(String[] args) {
+        try {
+            StudentDAO dao = new StudentDAO();
+            StudentView view = new StudentView();
+
+            int choice;
+            do {
+                choice = view.menu();
+                switch (choice) {
+                    case 1:
+                        dao.addStudent(view.getStudentDetails());
+                        break;
+                    case 2:
+                        dao.viewStudents();
+                        break;
+                    case 3:
+                        int id = view.getStudentId();
+                        int marks = view.getUpdatedMarks();
+                        dao.updateMarks(id, marks);
+                        break;
+                    case 4:
+                        dao.deleteStudent(view.getStudentId());
+                        break;
+                    case 5:
+                        System.out.println("Exiting...");
+                        break;
+                    default:
+                        System.out.println("Invalid choice!");
+                }
+            } while (choice != 5);
+
+            dao.close();
+        } catch (Exception e) {
+            System.out.println("Error: " + e.getMessage());
+        }
+    }
+}
